@@ -14,7 +14,7 @@ class MainGLSurfaceRenderer implements GLSurfaceView.Renderer {
     public float mAngleY;
 	
 	public MainGLSurfaceRenderer(){
-		cloud = new Cloud();
+		cloud = new Cloud(35);
 	}
 	
 	@Override
@@ -22,12 +22,12 @@ class MainGLSurfaceRenderer implements GLSurfaceView.Renderer {
 		//Clear Screen And Depth Buffer
 		gl.glClear(GL10.GL_COLOR_BUFFER_BIT | GL10.GL_DEPTH_BUFFER_BIT);	
 		gl.glLoadIdentity();					//Reset The Current Modelview Matrix
-		gl.glTranslatef(0.0f, 0f, -6.0f);
+		gl.glTranslatef(-1.0f, 0.0f, -3.0f);
         gl.glRotatef(mAngleX, 0f, 1f, 0f);
         gl.glRotatef(mAngleY, 1f, 0f, 0f);	
 		gl.glRotatef(rcloud, 1.0f, 0.0f, 0.0f);
 		cloud.draw(gl);						//Draw the cloud
-		
+		//
 		rcloud -= 0.35f;
 	}
 
