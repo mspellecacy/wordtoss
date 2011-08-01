@@ -7,12 +7,11 @@ import java.nio.FloatBuffer;
 
 import javax.microedition.khronos.opengles.GL10;
 
-import java.util.Arrays;
-
 public class Cloud {
 	
 	public FloatBuffer letterPlots;
 	public FloatBuffer quadPlots;
+	public ByteBuffer indices;
 	/**
 	 * The Cloud constructor. e
 	 * 
@@ -22,28 +21,34 @@ public class Cloud {
 
 	public Cloud(int plotCount) {
 		// Generate the cloud for display
-		//ByteBuffer.all
 		//
 		ByteBuffer byteBuf = ByteBuffer.allocateDirect(((plotCount+1)*3)*4);
 		byteBuf.order(ByteOrder.nativeOrder());
 		letterPlots = byteBuf.asFloatBuffer();
-		try{
-			for (int i=0; i<= plotCount;i++){
-				letterPlots.put(generatePlot());
-			}
-		}catch(Exception e){
-			Log.v("blah",e.toString());
-			Log.v("blah","Count: "+letterPlots.capacity());
-		};
+		
+		//Generate a set of locations for us to place quads
+		for (int i=0; i<= plotCount;i++){
+			letterPlots.put(generatePlot());
+		}
 		letterPlots.position(0);
-		Log.v("blah","Capacity: "+letterPlots.capacity());
+		
+		//Calculate those quad's corner points.
 		quadPlots = generateQuadsFromPoints(letterPlots);
+		
+		//Generate an triangle index for each quad. 
+		indices = this.generateQuadIndex(quadPlots.capacity()+1);
 		letterPlots.position(0);
 		quadPlots.position(0);
+		indices.position(0);
+		
+		// out put some stats
+		Log.v("blah","letCap: "+letterPlots.capacity());
+		Log.v("blah","quadCap: "+quadPlots.capacity());
+		Log.v("blah","indCap: "+indices.capacity());
 	}
 	
 	public Cloud(){
-		//Calling without a desired plotCount returns 500 plots.
+		//Calling without a plotCount returns 500 plots.
 		this(500);
 	}
 	/**	 
@@ -54,49 +59,42 @@ public class Cloud {
 	 * @param gl - The GL Context
 	 */
 	public void draw(GL10 gl) {
-		FloatBuffer curPlot;
-		//float[] thisQuad;
-		//
+
+		gl.glFrontFace(GL10.GL_CW);
+
+		//Point to our vertex buffer
+		gl.glVertexPointer(3, GL10.GL_FLOAT, 0, quadPlots);
 		
-		ByteBuffer byteBuf = ByteBuffer.allocateDirect(48);
-		byteBuf.order(ByteOrder.nativeOrder());
-		curPlot = byteBuf.asFloatBuffer();
-		while(quadPlots.hasRemaining()){
-			gl.glFrontFace(GL10.GL_CW);
-			float[] thisQuad = { quadPlots.get(), quadPlots.get(), quadPlots.get(),
-								 quadPlots.get(), quadPlots.get(), quadPlots.get(),
-								 quadPlots.get(), quadPlots.get(), quadPlots.get(),
-								 quadPlots.get(), quadPlots.get(), quadPlots.get()
-			};
-			curPlot.put(thisQuad);
-			//Point to our vertex buffer
-			gl.glVertexPointer(3, GL10.GL_FLOAT, 0, curPlot);
+		//Enable vertex buffer
+		gl.glEnableClientState(GL10.GL_VERTEX_ARRAY);
+			
+		//Set The Color To Blue
+		gl.glColor4f(0.5f, 0.5f, 1.0f, 1.0f);	
+			
+		//Draw the vertices as points
+		//gl.glDrawArrays(GL10.GL_TRIANGLE_STRIP, 0, curPlot.capacity() / 4);
+		try{	
+			gl.glDrawElements(GL10.GL_TRIANGLES, indices.capacity(),
+					GL10.GL_UNSIGNED_BYTE, indices);
+		}catch(Exception e){ 
+			Log.v("Blah",e.toString()); 
+		};
 		
-			//Enable vertex buffer
-			gl.glEnableClientState(GL10.GL_VERTEX_ARRAY);
-			
-			//Set The Color To Blue
-			gl.glColor4f(0.5f, 0.5f, 1.0f, 1.0f);	
-			
-			//Draw the vertices as points
-			gl.glDrawArrays(GL10.GL_TRIANGLE_STRIP, 0, curPlot.capacity() / 3);
-			
-			//gl.glDrawElements(GL10.GL_TRIANGLE_STRIP,quadPlots.capacity(),
-			//				GL10.GL_FLOAT, quadPlots.capacity() / 3);
-			//Disable the client state before leaving
-			curPlot.clear();
-			gl.glDisableClientState(GL10.GL_VERTEX_ARRAY);
-		}
+		//reset indices position so we can do this all over again.
+		indices.position(0);
 		
+		//Disable the client state before leaving
+		gl.glDisableClientState(GL10.GL_VERTEX_ARRAY);
+				
 	}
 	
-    
     public float[] generatePlot(){
 
     		float x = (float) (Math.random() - 0.5);
     		float y = (float) (Math.random() - 0.5); 
     		float z = (float) (Math.random() - 0.5);
     		float k = (float) Math.sqrt(x*x + y*y + z*z);
+    		
     		while (k < 0.2 || k > 0.3)
     		{
     			x = (float) (Math.random() - 0.5);
@@ -104,6 +102,7 @@ public class Cloud {
     			z = (float) (Math.random() - 0.5);
     			k = (float) Math.sqrt(x*x + y*y + z*z);
     		}
+    		
     		float[] toReturn = {x/k,y/k,z/k};
     		return toReturn;
     }
@@ -111,32 +110,46 @@ public class Cloud {
     public FloatBuffer generateQuadsFromPoints(FloatBuffer points){
     	// Generate a bunch of quads (squares) based on the single
     	// points given to us. The point will be the Top Left corner.
-    	FloatBuffer quads;
-    	int count = 0;
+    	FloatBuffer toReturn;
     	
 		ByteBuffer byteBuf = ByteBuffer.allocateDirect((((points.capacity()/3)*4)*4)*4);
 		byteBuf.order(ByteOrder.nativeOrder());
-		quads = byteBuf.asFloatBuffer();
+		toReturn = byteBuf.asFloatBuffer();
 		
+		// Loop over every point we're given and generate 3 more around it. 
     	while(points.hasRemaining()){
-    		Log.v("Blah","Position" + count);
+    		// Just to make things a bit more readable.
     		float thisX = points.get();
     		float thisY = points.get();
     		float thisZ = points.get();
-    		//;
+    		
+    		// add .05f to each point's needed coordinate 
     		float[] thisQuad = {
     							thisX,thisY-0.05f,thisZ, 		// Bottom Left
     							thisX+0.05f,thisY-0.05f,thisZ, 	// Bottom Right
     							thisX,thisY,thisZ, 				// Top Left
     							thisX+0.05f,thisY,thisZ			// Top Right
     		};
-    		Log.v("Blah","Location: "+thisQuad[0]+","+thisQuad[1]+","+thisQuad[2]);
-    		Log.v("Blah","Location: "+thisQuad[3]+","+thisQuad[4]+","+thisQuad[5]);
-    		Log.v("Blah","Location: "+thisQuad[6]+","+thisQuad[7]+","+thisQuad[8]);
-    		Log.v("Blah","Location: "+thisQuad[9]+","+thisQuad[10]+","+thisQuad[11]);
-    		quads.put(thisQuad);
-    		count++;
+    		
+    		toReturn.put(thisQuad);
     	}
-    	return quads;
+    	return toReturn;
     }
+    public ByteBuffer generateQuadIndex(int indexCount){
+    	// We need to create triangle points (6) for each quad we're generating.
+    	ByteBuffer toReturn = ByteBuffer.allocateDirect((indexCount*6)+6);
+		toReturn.order(ByteOrder.nativeOrder());
+    	int curPoint = 0;
+
+    	for(int i=0;i<=indexCount;i++){
+    		byte thisIndex[] = {
+    				(byte) curPoint, (byte) (curPoint+1), (byte) (curPoint+2),
+		    		(byte) (curPoint+1), (byte) (curPoint+2), (byte) (curPoint+3)
+		    		};
+    		curPoint=curPoint+4;
+    		toReturn.put(thisIndex);
+    	}
+    	Log.v("Blah","Exiting indices gen.");
+		return toReturn;
+    };
 }

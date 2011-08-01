@@ -1,6 +1,5 @@
 package com.frakle.wordtoss;
 
-import com.frakle.wordtoss.Square;
 import javax.microedition.khronos.egl.EGLConfig;
 import javax.microedition.khronos.opengles.GL10;
 
@@ -9,14 +8,13 @@ import android.opengl.GLU;
 
 class MainGLSurfaceRenderer implements GLSurfaceView.Renderer {
 	private Cloud cloud;
-	private Square square;
 	private float rcloud;
     public float mAngleX;
     public float mAngleY;
 	
 	public MainGLSurfaceRenderer(){
-		cloud = new Cloud(35);
-		square = new Square();
+		cloud = new Cloud(10);
+
 	}
 	
 	@Override
