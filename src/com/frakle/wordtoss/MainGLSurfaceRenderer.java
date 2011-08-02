@@ -11,9 +11,10 @@ class MainGLSurfaceRenderer implements GLSurfaceView.Renderer {
 	private float rcloud;
     public float mAngleX;
     public float mAngleY;
+    public int cloudSize = 35;
 	
 	public MainGLSurfaceRenderer(){
-		cloud = new Cloud(10);
+		cloud = new Cloud(cloudSize);
 
 	}
 	

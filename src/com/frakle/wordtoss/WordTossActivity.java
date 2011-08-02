@@ -34,10 +34,6 @@ public class WordTossActivity extends Activity {
         super.onResume();
         glSurface.onResume();
     }
-    
-
-
-
 }
     
 

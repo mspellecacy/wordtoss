@@ -4,11 +4,12 @@ import android.util.Log;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.FloatBuffer;
+import java.util.Arrays;
 
 import javax.microedition.khronos.opengles.GL10;
 
 public class Cloud {
-	
+	public boolean __DEBUG__ = true;
 	public FloatBuffer letterPlots;
 	public FloatBuffer quadPlots;
 	public ByteBuffer indices;
@@ -21,7 +22,7 @@ public class Cloud {
 
 	public Cloud(int plotCount) {
 		// Generate the cloud for display
-		//
+		//Letter Plots
 		ByteBuffer byteBuf = ByteBuffer.allocateDirect(((plotCount+1)*3)*4);
 		byteBuf.order(ByteOrder.nativeOrder());
 		letterPlots = byteBuf.asFloatBuffer();
@@ -36,15 +37,20 @@ public class Cloud {
 		quadPlots = generateQuadsFromPoints(letterPlots);
 		
 		//Generate an triangle index for each quad. 
+		indices = ByteBuffer.allocateDirect(((quadPlots.capacity()+1)*6)+6);
 		indices = this.generateQuadIndex(quadPlots.capacity()+1);
+		
 		letterPlots.position(0);
 		quadPlots.position(0);
 		indices.position(0);
 		
 		// out put some stats
-		Log.v("blah","letCap: "+letterPlots.capacity());
-		Log.v("blah","quadCap: "+quadPlots.capacity());
-		Log.v("blah","indCap: "+indices.capacity());
+		if(__DEBUG__){
+			Log.v("blah","letCap: "+letterPlots.capacity());
+			Log.v("blah","quadCap: "+quadPlots.capacity());
+			Log.v("blah","indCap: "+indices.capacity());
+		}
+
 	}
 	
 	public Cloud(){
@@ -77,11 +83,11 @@ public class Cloud {
 			gl.glDrawElements(GL10.GL_TRIANGLES, indices.capacity(),
 					GL10.GL_UNSIGNED_BYTE, indices);
 		}catch(Exception e){ 
-			Log.v("Blah",e.toString()); 
+			Log.e("WordToss",e.toString()); 
 		};
 		
 		//reset indices position so we can do this all over again.
-		indices.position(0);
+		//indices.position(0);
 		
 		//Disable the client state before leaving
 		gl.glDisableClientState(GL10.GL_VERTEX_ARRAY);
@@ -146,10 +152,14 @@ public class Cloud {
     				(byte) curPoint, (byte) (curPoint+1), (byte) (curPoint+2),
 		    		(byte) (curPoint+1), (byte) (curPoint+2), (byte) (curPoint+3)
 		    		};
+    		//Arrays.deepToString(Byte temp[] = thisIndex[]);
     		curPoint=curPoint+4;
     		toReturn.put(thisIndex);
+    		Log.v("blah","Out"+thisIndex[0]);
     	}
-    	Log.v("Blah","Exiting indices gen.");
+    	if(__DEBUG__){
+    		Log.v("Blah","Exiting indices gen.");
+    	}
 		return toReturn;
     };
 }
