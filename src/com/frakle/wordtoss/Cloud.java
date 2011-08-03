@@ -9,20 +9,21 @@ import java.util.Arrays;
 import javax.microedition.khronos.opengles.GL10;
 
 public class Cloud {
-	public boolean __DEBUG__ = true;
-	public FloatBuffer letterPlots;
-	public FloatBuffer quadPlots;
-	public ByteBuffer indices;
 	/**
 	 * The Cloud constructor. e
 	 * 
 	 * Initiate the buffers.
 	 */
-	
+	public boolean __DEBUG__ = true;
+	public FloatBuffer letterPlots;
+	public FloatBuffer quadPlots;
+	public ByteBuffer indices;
+	public float qSize = 0.08f;
 
 	public Cloud(int plotCount) {
 		// Generate the cloud for display
-		//Letter Plots
+		// number of plots+1, multiply by 3 (3 entries per point)
+		// multiply by 4 to compensate for float.
 		ByteBuffer byteBuf = ByteBuffer.allocateDirect(((plotCount+1)*3)*4);
 		byteBuf.order(ByteOrder.nativeOrder());
 		letterPlots = byteBuf.asFloatBuffer();
@@ -40,9 +41,9 @@ public class Cloud {
 		indices = ByteBuffer.allocateDirect(((quadPlots.capacity()+1)*6)+6);
 		indices = this.generateQuadIndex(quadPlots.capacity()+1);
 		
-		letterPlots.position(0);
-		quadPlots.position(0);
-		indices.position(0);
+		letterPlots.flip();
+		quadPlots.flip();
+		indices.flip();
 		
 		// out put some stats
 		if(__DEBUG__){
@@ -54,8 +55,8 @@ public class Cloud {
 	}
 	
 	public Cloud(){
-		//Calling without a plotCount returns 500 plots.
-		this(500);
+		//Calling without a plotCount returns 50 plots.
+		this(25);
 	}
 	/**	 
 	 * * The object own drawing function.
@@ -64,34 +65,34 @@ public class Cloud {
 	 * 
 	 * @param gl - The GL Context
 	 */
+	//
 	public void draw(GL10 gl) {
+		
+		gl.glPushMatrix();
 
-		gl.glFrontFace(GL10.GL_CW);
-
-		//Point to our vertex buffer
-		gl.glVertexPointer(3, GL10.GL_FLOAT, 0, quadPlots);
-		
-		//Enable vertex buffer
-		gl.glEnableClientState(GL10.GL_VERTEX_ARRAY);
+			gl.glFrontFace(GL10.GL_CW);
+	
+			//Point to our vertex buffer
+			gl.glVertexPointer(3, GL10.GL_FLOAT, 0, quadPlots);
 			
-		//Set The Color To Blue
-		gl.glColor4f(0.5f, 0.5f, 1.0f, 1.0f);	
-			
-		//Draw the vertices as points
-		//gl.glDrawArrays(GL10.GL_TRIANGLE_STRIP, 0, curPlot.capacity() / 4);
-		try{	
-			gl.glDrawElements(GL10.GL_TRIANGLES, indices.capacity(),
-					GL10.GL_UNSIGNED_BYTE, indices);
-		}catch(Exception e){ 
-			Log.e("WordToss",e.toString()); 
-		};
-		
-		//reset indices position so we can do this all over again.
-		//indices.position(0);
-		
-		//Disable the client state before leaving
-		gl.glDisableClientState(GL10.GL_VERTEX_ARRAY);
+			//Enable vertex buffer
+			gl.glEnableClientState(GL10.GL_VERTEX_ARRAY);
 				
+			//Set The Color To Blue
+			gl.glColor4f(0.5f, 0.5f, 1.0f, 1.0f);	
+				
+			//Draw the triangles. 
+			try{	
+				gl.glDrawElements(GL10.GL_TRIANGLES, indices.capacity(),
+						GL10.GL_UNSIGNED_BYTE, indices);
+			}catch(Exception e){ 
+				Log.e("WordToss",e.toString()); 
+			};
+			
+			//Disable the client state before leaving
+			gl.glDisableClientState(GL10.GL_VERTEX_ARRAY);
+		gl.glPopMatrix();
+		
 	}
 	
     public float[] generatePlot(){
@@ -117,7 +118,8 @@ public class Cloud {
     	// Generate a bunch of quads (squares) based on the single
     	// points given to us. The point will be the Top Left corner.
     	FloatBuffer toReturn;
-    	
+    	// 3 cords per point, we just want the actual number of 'points'
+    	// multiply it out to compensate for converting to float.
 		ByteBuffer byteBuf = ByteBuffer.allocateDirect((((points.capacity()/3)*4)*4)*4);
 		byteBuf.order(ByteOrder.nativeOrder());
 		toReturn = byteBuf.asFloatBuffer();
@@ -131,18 +133,26 @@ public class Cloud {
     		
     		// add .05f to each point's needed coordinate 
     		float[] thisQuad = {
-    							thisX,thisY-0.05f,thisZ, 		// Bottom Left
-    							thisX+0.05f,thisY-0.05f,thisZ, 	// Bottom Right
+    							thisX,thisY-qSize,thisZ, 		// Bottom Left
+    							thisX+qSize,thisY-qSize,thisZ, 	// Bottom Right
     							thisX,thisY,thisZ, 				// Top Left
-    							thisX+0.05f,thisY,thisZ			// Top Right
+    							thisX+qSize,thisY,thisZ			// Top Right
     		};
     		
     		toReturn.put(thisQuad);
     	}
     	return toReturn;
     }
+    
+    public void update(GL10 gl){
+    	quadPlots.clear();
+		quadPlots = generateQuadsFromPoints(letterPlots);
+		quadPlots.flip();
+    };
+    
     public ByteBuffer generateQuadIndex(int indexCount){
-    	// We need to create triangle points (6) for each quad we're generating.
+    	// We need to create triangle vertexes (quad = 2 triangles, 2 tri's = 6 points ) 
+    	// for each quad we're generating.
     	ByteBuffer toReturn = ByteBuffer.allocateDirect((indexCount*6)+6);
 		toReturn.order(ByteOrder.nativeOrder());
     	int curPoint = 0;
@@ -152,14 +162,13 @@ public class Cloud {
     				(byte) curPoint, (byte) (curPoint+1), (byte) (curPoint+2),
 		    		(byte) (curPoint+1), (byte) (curPoint+2), (byte) (curPoint+3)
 		    		};
-    		//Arrays.deepToString(Byte temp[] = thisIndex[]);
     		curPoint=curPoint+4;
     		toReturn.put(thisIndex);
-    		Log.v("blah","Out"+thisIndex[0]);
     	}
     	if(__DEBUG__){
     		Log.v("Blah","Exiting indices gen.");
     	}
+    	//toReturn.flip();
 		return toReturn;
     };
 }
