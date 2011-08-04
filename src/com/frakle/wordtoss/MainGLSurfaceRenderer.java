@@ -29,7 +29,7 @@ class MainGLSurfaceRenderer implements GLSurfaceView.Renderer {
 			gl.glTranslatef(-0.75f, 0.0f, -3.0f);  // Move the viewport so we can see things.
 	        gl.glRotatef(mAngleX, 0f, 1f, 0f);
 	        gl.glRotatef(mAngleY, 1f, 0f, 0f);	
-			gl.glRotatef(rcloud, 1.0f, 0.0f, 0.0f);
+			//gl.glRotatef(rcloud, 1.0f, 0.0f, 0.0f);
 			cloud.draw(gl);						//Draw the cloud
 			rcloud -= 0.35f;
 		gl.glPopMatrix();
